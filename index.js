@@ -2,7 +2,7 @@ const chalk = require('chalk');
 const clear = require('clear');
 const figlet = require('figlet');
 const inquirer = require('./lib/inquirer');
-const { getUser, postInvite } = require('./lib/github');
+const { getUser, postInvite, getOrgInfo } = require('./lib/github');
 
 /**
  * Validate GitHub usernames by getting user info
@@ -29,6 +29,20 @@ const validateUsers = async usernameArray => {
 };
 
 /**
+ * Validate GitHub organization
+ * @param {String} orgName the organization name
+ */
+const validateOrg = async orgName => {
+    try {
+      const orgInfo = await getOrgInfo(orgName);
+      return orgInfo.login;
+    } catch (e) {
+      console.warn(`Cannot find GitHub org: ${orgName}`);
+      return null;
+    }
+};
+
+/**
  * Send invite to each user
  * @param {Array} usernameArray validated users
  * @param {String} orgname name of organization to invite to
@@ -52,14 +66,18 @@ const main = async () => {
     const credentials = await inquirer.getInviteInfo();
     const { orgname, usernames } = credentials;
 
+    // validate org:
+    const validatedOrg = await validateOrg(orgname);
+    if (!validatedOrg) return;
+
     // validate users:
     const usersArray = usernames.split(',');
     const validateUsernames = await validateUsers(usersArray);
 
     // invite users:
     const { isConfirmed } = await inquirer.confirmInvite();
-    if (isConfirmed) await inviteUsers(validateUsernames, orgname);
-    else console.info('See ya!'); 
+    if (isConfirmed) await inviteUsers(validateUsernames, validatedOrg);
+    else console.info('See ya!');
   } catch (e) {
     console.error(e);
   }
