@@ -3,6 +3,32 @@ const clear = require('clear');
 const figlet = require('figlet');
 const inquirer = require('./lib/inquirer');
 const github = require('./lib/github');
+const { LOG_TYPE } = require('./lib/constant');
+
+const chalkLogging = (input, type) => {
+ const inputBlock = typeof input === 'string' || input instanceof String ? input: JSON.stringify(input, null, 4);
+ let logContent;
+ switch (type) {
+  case LOG_TYPE.SUCCESSS:
+    logContent = chalk.green;
+    break;
+  case LOG_TYPE.ERROR:
+    logContent = chalk.red;
+    break;
+  case LOG_TYPE.WARN:
+    logContent = chalk.magenta;
+    break;
+  case LOG_TYPE.INFO:
+    logContent = chalk.blue;
+    break;
+  case LOG_TYPE.APP:
+    logContent = chalk.yellow;
+    break; 
+  default:
+    logContent = chalk.white;
+  }
+  console.log(logContent(inputBlock));
+};
 
 /**
  * Validate GitHub usernames by getting user info
@@ -17,14 +43,14 @@ const validateUsers = async usernameArray => {
         id: userInfo.id,
       };
     } catch (e) {
-      console.warn(`Cannot find GitHub user: ${username}`);
+      chalkLogging(`Cannot find GitHub user: ${username}`, LOG_TYPE.WARN);
       return null;
     }
   });
   // wait until all promises resolve:
   const validateUsernames = await Promise.all(promises);
-  console.info('GitHub users to invite:');
-  console.info(validateUsernames);
+  chalkLogging('GitHub users to invite:', LOG_TYPE.INFO);
+  chalkLogging(validateUsernames, LOG_TYPE.INFO);
   return validateUsernames;
 };
 
@@ -37,7 +63,7 @@ const validateOrg = async orgName => {
       const orgInfo = await github.getOrgInfo(orgName);
       return orgInfo.login;
     } catch (e) {
-      console.warn(`Cannot find GitHub org: ${orgName}`);
+      chalkLogging(`Cannot find GitHub org: ${orgName}`, LOG_TYPE.WARN);
       return null;
     }
 };
@@ -52,12 +78,12 @@ const inviteUsers = async (usernameArray, orgname) => {
   await Promise.all(userArray.map(async user => {
     try {
       const k = await github.postInvite(orgname, user.id);
-      console.log(`Successfully invited ${k.login}.`);
+      chalkLogging(`Successfully invited ${k.login}.`, LOG_TYPE.SUCCESSS);
     } catch (e) {
-      console.error(`Cannot invite GitHub user: ${user.login}, ${e}`);
+      chalkLogging(`Cannot invite GitHub user: ${user.login}, ${e}`, LOG_TYPE.WARN);
     }
   }));
-  console.info('All users invited.');
+  chalkLogging('All users invited.', LOG_TYPE.SUCCESSS);
 };
 
 const main = async () => {
@@ -77,17 +103,13 @@ const main = async () => {
     // invite users:
     const { isConfirmed } = await inquirer.confirmInvite();
     if (isConfirmed) await inviteUsers(validateUsernames, validatedOrg);
-    else console.info('See ya!');
+    else chalkLogging('See ya!');
   } catch (e) {
-    console.error(e);
+    chalkLogging(e, LOG_TYPE.ERROR);
   }
 }
 
 // Start cli:
 clear();
-console.log(
-  chalk.yellow(
-    figlet.textSync('GitHub Invitor', { horizontalLayout: 'full' })
-  )
-);
+chalkLogging(figlet.textSync('GitHub Invitor', { horizontalLayout: 'full' }), LOG_TYPE.APP);
 main();
