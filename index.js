@@ -2,7 +2,7 @@ const chalk = require('chalk');
 const clear = require('clear');
 const figlet = require('figlet');
 const inquirer = require('./lib/inquirer');
-const { getUser, postInvite, getOrgInfo } = require('./lib/github');
+const github = require('./lib/github');
 
 /**
  * Validate GitHub usernames by getting user info
@@ -11,7 +11,7 @@ const { getUser, postInvite, getOrgInfo } = require('./lib/github');
 const validateUsers = async usernameArray => {
   const promises = usernameArray.map(async username => {
     try {
-      const userInfo = await getUser(username);
+      const userInfo = await github.getUser(username);
       return {
         login: userInfo.login,
         id: userInfo.id,
@@ -34,7 +34,7 @@ const validateUsers = async usernameArray => {
  */
 const validateOrg = async orgName => {
     try {
-      const orgInfo = await getOrgInfo(orgName);
+      const orgInfo = await github.getOrgInfo(orgName);
       return orgInfo.login;
     } catch (e) {
       console.warn(`Cannot find GitHub org: ${orgName}`);
@@ -51,7 +51,7 @@ const inviteUsers = async (usernameArray, orgname) => {
   const userArray = usernameArray.filter(username => username);
   await Promise.all(userArray.map(async user => {
     try {
-      const k = await postInvite(orgname, user.id);
+      const k = await github.postInvite(orgname, user.id);
       console.log(`Successfully invited ${k.login}.`);
     } catch (e) {
       console.error(`Cannot invite GitHub user: ${user.login}, ${e}`);
@@ -83,7 +83,7 @@ const main = async () => {
   }
 }
 
-// start cli:
+// Start cli:
 clear();
 console.log(
   chalk.yellow(
